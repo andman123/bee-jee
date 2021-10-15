@@ -1,6 +1,8 @@
 import React, { useState } from "react";
+import { Button, Col, Row } from "reactstrap";
+import AddTaskModal from "../components/AddTaskModal";
 import TaskListTable from "../components/TaskListTable";
-import axios from "../configs/axios";
+import TaskRepository from "../repositories/TaskRepository";
 
 const taskStatuses = {
 	0: "задача не выполнена",
@@ -29,7 +31,6 @@ const HomePage = () => {
 				Header: "статус",
 				accessor: "status",
 				Cell: ({ value }) => {
-					console.log(value);
 					return taskStatuses[value];
 				},
 			},
@@ -37,40 +38,61 @@ const HomePage = () => {
 		[]
 	);
 
+	const [addTaskModal, setAddTaskModal] = useState(false);
+	const toggleAddTaskModal = () => setAddTaskModal(!addTaskModal);
+
 	const [loading, setLoading] = React.useState(false);
 	const [pageCount, setPageCount] = React.useState(0);
+	const [totalCount, setTotalCount] = React.useState(0);
 
-	const fetchData = React.useCallback(({ pageSize, pageIndex }) => {
+	const fetchData = React.useCallback(async ({ pageSize, pageIndex }) => {
 		// Set the loading state
 		setLoading(true);
 
-		axios
-			.get(`/?page=${pageIndex + 1}`)
-			.then((response) => {
-				console.log(response);
-				if (response.data.status === "ok") {
-					setTasks(response.data.message.tasks);
-					setPageCount(
-						Math.ceil(
-							response.data.message.total_task_count / pageSize
-						)
-					);
-					setLoading(false);
-				}
-			})
-			.catch((error) => {
-				console.log(error);
-			});
+		const response = await TaskRepository.getTasks({ page: pageIndex + 1 });
+		if (response.data.status === "ok") {
+			setTasks(response.data.message.tasks);
+			setPageCount(
+				Math.ceil(response.data.message.total_task_count / pageSize)
+			);
+			setTotalCount(response.data.message.total_task_count);
+			setLoading(false);
+		}
 	}, []);
+
+	const addTask = async (data) => {
+		const result = await TaskRepository.createTask(data);
+		if (result.data.status === "ok") {
+			setTotalCount(Number(totalCount) + 1);
+		}
+	};
+
 	return (
 		<div>
-			<h2>Tasks</h2>
+			<Row>
+				<Col>
+					<h2>Задачи</h2>
+				</Col>
+				<Col className="text-right">
+					<Button color="primary" onClick={toggleAddTaskModal}>
+						Добавить задачу
+					</Button>
+				</Col>
+			</Row>
+
+			<AddTaskModal
+				modal={addTaskModal}
+				toggle={toggleAddTaskModal}
+				addTask={addTask}
+			/>
+
 			<TaskListTable
 				columns={columns}
 				data={tasks}
 				fetchData={fetchData}
 				loading={loading}
 				pageCount={pageCount}
+				totalCount={totalCount}
 			/>
 		</div>
 	);

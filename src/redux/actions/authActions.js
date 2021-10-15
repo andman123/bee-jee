@@ -1,9 +1,10 @@
 import { LOGIN, LOGIN_FAILED, LOGOUT } from "../constants/auth-action-types";
-import axios from "../../configs/axios";
+import AccountRepository from "../../repositories/AccountRepository";
 
 export const login = (data) => {
 	return async (dispatch) => {
-		const result = await axios.post("login", data);
+		console.log(data);
+		const result = await AccountRepository.login(data);
 		console.log(result);
 		dispatch({
 			type: result.data.status === "ok" ? LOGIN : LOGIN_FAILED,

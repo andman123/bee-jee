@@ -7,6 +7,7 @@ const TaskListTable = ({
 	data,
 	fetchData,
 	loading,
+	totalCount,
 	pageCount: controlledPageCount,
 }) => {
 	const {
@@ -22,7 +23,6 @@ const TaskListTable = ({
 		gotoPage,
 		nextPage,
 		previousPage,
-		setPageSize,
 		// Get the state from the instance
 		state: { pageIndex, pageSize },
 	} = useTable(
@@ -40,8 +40,9 @@ const TaskListTable = ({
 	);
 
 	React.useEffect(() => {
+		console.log("fetchData");
 		fetchData({ pageIndex, pageSize });
-	}, [fetchData, pageIndex, pageSize]);
+	}, [fetchData, pageIndex, pageSize, totalCount]);
 
 	return (
 		<>
@@ -85,8 +86,7 @@ const TaskListTable = ({
 							<td colSpan="10000">Loading...</td>
 						) : (
 							<td colSpan="10000">
-								Showing {page.length} of ~
-								{controlledPageCount * pageSize} results
+								Showing {page.length} of ~{totalCount} results
 							</td>
 						)}
 					</tr>

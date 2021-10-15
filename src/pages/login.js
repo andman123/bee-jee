@@ -16,13 +16,8 @@ const LoginPage = () => {
 		formState: { errors },
 	} = useForm();
 
-	console.log(errors);
 	const onSubmit = (data) => {
-		let formData = new FormData();
-		for (const key in data) {
-			formData.append(key, data[key]);
-		}
-		dispatch(login(formData));
+		dispatch(login(data));
 	};
 	if (!!auth.token) {
 		return <Redirect to="/" />;

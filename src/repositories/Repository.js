@@ -7,7 +7,7 @@ export const customHeaders = {
 };
 
 export default axios.create({
-	baseUrl,
+	baseURL: baseUrl,
 	headers: customHeaders,
 	params: { developer: "Andranik2" },
 });

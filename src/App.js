@@ -1,25 +1,26 @@
-import logo from './logo.svg';
-import './App.css';
+import { Route, Switch } from "react-router";
+import { Container } from "reactstrap";
+import Header from "./components/Header";
+import HomePage from "./pages";
+import LoginPage from "./pages/login";
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+	return (
+		<>
+			<Header />
+			<Container className="py-5">
+				<Switch>
+					<Route path="/" exact>
+						<HomePage />
+					</Route>
+
+					<Route path="/login" exact>
+						<LoginPage />
+					</Route>
+				</Switch>
+			</Container>
+		</>
+	);
 }
 
 export default App;

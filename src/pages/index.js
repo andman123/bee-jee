@@ -1,17 +1,47 @@
 import React, { useState } from "react";
-import { Button, Col, Row } from "reactstrap";
+import { useSelector } from "react-redux";
+import { Badge, Button, Col, Row } from "reactstrap";
 import AddTaskModal from "../components/AddTaskModal";
 import TaskListTable from "../components/TaskListTable";
+import { getAuth } from "../redux/selectors";
 import TaskRepository from "../repositories/TaskRepository";
 
 const taskStatuses = {
-	0: "задача не выполнена",
-	1: "задача не выполнена, отредактирована админом",
-	10: "задача выполнена",
-	11: "задача отредактирована админом и выполнена",
+	0: ["не выполнена"],
+	1: ["не выполнена"],
+	10: ["выполнено"],
+	11: ["выполнено", "отредактировано администратором"],
+};
+
+// Create an editable cell renderer
+const EditableCell = ({
+	value: initialValue,
+	row: { index },
+	column: { id },
+	updateMyData, // This is a custom function that we supplied to our table instance
+}) => {
+	// We need to keep and update the state of the cell normally
+	const [value, setValue] = React.useState(initialValue);
+
+	const onChange = (e) => {
+		setValue(e.target.value);
+	};
+
+	// We'll only update the external data when the input is blurred
+	const onBlur = () => {
+		updateMyData(index, id, value);
+	};
+
+	// If the initialValue is changed external, sync it up with our state
+	React.useEffect(() => {
+		setValue(initialValue);
+	}, [initialValue]);
+
+	return <input value={value} onChange={onChange} onBlur={onBlur} />;
 };
 
 const HomePage = () => {
+	const auth = useSelector(getAuth);
 	const [tasks, setTasks] = useState([]);
 	const columns = React.useMemo(
 		() => [
@@ -26,12 +56,18 @@ const HomePage = () => {
 			{
 				Header: "текст задачи",
 				accessor: "text",
+				//Cell: EditableCell,
+				disableSortBy: true,
 			},
 			{
 				Header: "статус",
 				accessor: "status",
 				Cell: ({ value }) => {
-					return taskStatuses[value];
+					let statuses = taskStatuses[value].map((status) => {
+						return <Badge color="success">{status}</Badge>;
+					});
+
+					return <>{statuses}</>;
 				},
 			},
 		],
@@ -45,26 +81,45 @@ const HomePage = () => {
 	const [pageCount, setPageCount] = React.useState(0);
 	const [totalCount, setTotalCount] = React.useState(0);
 
-	const fetchData = React.useCallback(async ({ pageSize, pageIndex }) => {
-		// Set the loading state
-		setLoading(true);
+	const fetchData = React.useCallback(
+		async ({ pageSize, pageIndex, sortBy }) => {
+			// Set the loading state
+			setLoading(true);
+			let params = {
+				page: pageIndex + 1,
+			};
 
-		const response = await TaskRepository.getTasks({ page: pageIndex + 1 });
-		if (response.data.status === "ok") {
-			setTasks(response.data.message.tasks);
-			setPageCount(
-				Math.ceil(response.data.message.total_task_count / pageSize)
-			);
-			setTotalCount(response.data.message.total_task_count);
-			setLoading(false);
-		}
-	}, []);
+			if (sortBy.length) {
+				let sortDirection = sortBy[0].desc ? "desc" : "asc";
+				Object.assign(params, {
+					sort_field: sortBy[0].id,
+					sort_direction: sortDirection,
+				});
+			}
+
+			const response = await TaskRepository.getTasks(params);
+			if (response.data.status === "ok") {
+				setTasks(response.data.message.tasks);
+				setPageCount(
+					Math.ceil(response.data.message.total_task_count / pageSize)
+				);
+				setTotalCount(response.data.message.total_task_count);
+				setLoading(false);
+			}
+		},
+		[]
+	);
 
 	const addTask = async (data) => {
 		const result = await TaskRepository.createTask(data);
 		if (result.data.status === "ok") {
 			setTotalCount(Number(totalCount) + 1);
 		}
+	};
+
+	const editTask = async (data) => {
+		const result = await TaskRepository.editTask(data);
+		console.log(result);
 	};
 
 	return (

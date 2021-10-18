@@ -1,5 +1,5 @@
 import React from "react";
-import { usePagination, useTable } from "react-table";
+import { usePagination, useTable, useSortBy } from "react-table";
 import { Pagination, PaginationItem, PaginationLink, Table } from "reactstrap";
 
 const TaskListTable = ({
@@ -24,7 +24,7 @@ const TaskListTable = ({
 		nextPage,
 		previousPage,
 		// Get the state from the instance
-		state: { pageIndex, pageSize },
+		state: { pageIndex, pageSize, sortBy },
 	} = useTable(
 		{
 			columns,
@@ -35,14 +35,16 @@ const TaskListTable = ({
 			// This means we'll also have to provide our own
 			// pageCount.
 			pageCount: controlledPageCount,
+			manualSortBy: true,
+			disableSortRemove: true,
 		},
+		useSortBy,
 		usePagination
 	);
 
 	React.useEffect(() => {
-		console.log("fetchData");
-		fetchData({ pageIndex, pageSize });
-	}, [fetchData, pageIndex, pageSize, totalCount]);
+		fetchData({ pageIndex, pageSize, sortBy });
+	}, [sortBy, fetchData, pageIndex, pageSize, totalCount]);
 
 	return (
 		<>
@@ -51,7 +53,11 @@ const TaskListTable = ({
 					{headerGroups.map((headerGroup) => (
 						<tr {...headerGroup.getHeaderGroupProps()}>
 							{headerGroup.headers.map((column) => (
-								<th {...column.getHeaderProps()}>
+								<th
+									{...column.getHeaderProps(
+										column.getSortByToggleProps()
+									)}
+								>
 									{column.render("Header")}
 									<span>
 										{column.isSorted

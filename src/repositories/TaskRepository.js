@@ -11,6 +11,15 @@ class TaskRepository {
 
 		return response;
 	}
+
+	async editTask(id, data) {
+		const response = await Repository.post(
+			`/edit/${id}`,
+			createFormData(data)
+		);
+
+		return response;
+	}
 }
 
 export default new TaskRepository();

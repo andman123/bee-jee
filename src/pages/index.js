@@ -1,50 +1,27 @@
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import { Badge, Button, Col, Row } from "reactstrap";
-import AddTaskModal from "../components/AddTaskModal";
-import TaskListTable from "../components/TaskListTable";
+import { BsPen } from "react-icons/bs";
+
 import { getAuth } from "../redux/selectors";
 import TaskRepository from "../repositories/TaskRepository";
 
+import AddTaskModal from "../components/AddTaskModal";
+import TaskListTable from "../components/TaskListTable";
+import EditTaskModal from "../components/EditTaskModal";
+
 const taskStatuses = {
 	0: ["не выполнена"],
-	1: ["не выполнена"],
+	1: ["отредактирована админом"],
 	10: ["выполнено"],
 	11: ["выполнено", "отредактировано администратором"],
-};
-
-// Create an editable cell renderer
-const EditableCell = ({
-	value: initialValue,
-	row: { index },
-	column: { id },
-	updateMyData, // This is a custom function that we supplied to our table instance
-}) => {
-	// We need to keep and update the state of the cell normally
-	const [value, setValue] = React.useState(initialValue);
-
-	const onChange = (e) => {
-		setValue(e.target.value);
-	};
-
-	// We'll only update the external data when the input is blurred
-	const onBlur = () => {
-		updateMyData(index, id, value);
-	};
-
-	// If the initialValue is changed external, sync it up with our state
-	React.useEffect(() => {
-		setValue(initialValue);
-	}, [initialValue]);
-
-	return <input value={value} onChange={onChange} onBlur={onBlur} />;
 };
 
 const HomePage = () => {
 	const auth = useSelector(getAuth);
 	const [tasks, setTasks] = useState([]);
-	const columns = React.useMemo(
-		() => [
+	const columns = React.useMemo(() => {
+		const tableColumns = [
 			{
 				Header: "имя пользователя",
 				accessor: "username", // accessor is the "key" in the data
@@ -56,7 +33,6 @@ const HomePage = () => {
 			{
 				Header: "текст задачи",
 				accessor: "text",
-				//Cell: EditableCell,
 				disableSortBy: true,
 			},
 			{
@@ -64,18 +40,53 @@ const HomePage = () => {
 				accessor: "status",
 				Cell: ({ value }) => {
 					let statuses = taskStatuses[value].map((status) => {
-						return <Badge color="success">{status}</Badge>;
+						return (
+							<Badge color="success" key={status}>
+								{status}
+							</Badge>
+						);
 					});
 
 					return <>{statuses}</>;
 				},
 			},
-		],
-		[]
-	);
+		];
+
+		if (auth.token) {
+			tableColumns.push({
+				Header: "Actions",
+				id: "actions",
+				Cell: (props) => {
+					console.log(props);
+					return (
+						<Button
+							onClick={() =>
+								openEditTaskModal(props.row.original)
+							}
+						>
+							<BsPen />
+						</Button>
+					);
+				},
+			});
+		}
+
+		return tableColumns;
+	}, [auth]);
 
 	const [addTaskModal, setAddTaskModal] = useState(false);
 	const toggleAddTaskModal = () => setAddTaskModal(!addTaskModal);
+
+	const [editTaskModal, setEditTaskModal] = useState(false);
+	const [task, setTask] = useState(null);
+	const toggleEditTaskModal = () => {
+		setEditTaskModal(!editTaskModal);
+	};
+
+	const openEditTaskModal = (task) => {
+		setTask(task);
+		setEditTaskModal(true);
+	};
 
 	const [loading, setLoading] = React.useState(false);
 	const [pageCount, setPageCount] = React.useState(0);
@@ -98,6 +109,7 @@ const HomePage = () => {
 			}
 
 			const response = await TaskRepository.getTasks(params);
+			console.log("tasks", response);
 			if (response.data.status === "ok") {
 				setTasks(response.data.message.tasks);
 				setPageCount(
@@ -117,9 +129,22 @@ const HomePage = () => {
 		}
 	};
 
-	const editTask = async (data) => {
-		const result = await TaskRepository.editTask(data);
-		console.log(result);
+	const editTask = async (id, data) => {
+		data.token = auth.token;
+		const result = await TaskRepository.editTask(id, data);
+		if (result.data.status === "ok") {
+			setTasks((oldTasks) =>
+				oldTasks.map((row) => {
+					if (row.id === id) {
+						return {
+							...row,
+							text: data.text,
+						};
+					}
+					return row;
+				})
+			);
+		}
 	};
 
 	return (
@@ -139,6 +164,13 @@ const HomePage = () => {
 				modal={addTaskModal}
 				toggle={toggleAddTaskModal}
 				addTask={addTask}
+			/>
+
+			<EditTaskModal
+				modal={editTaskModal}
+				toggle={toggleEditTaskModal}
+				task={task}
+				editTask={editTask}
 			/>
 
 			<TaskListTable
